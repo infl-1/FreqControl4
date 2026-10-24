@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Unzip project
-        run: unzip -q CamUnlock.zip
+        run: unzip -q gggg.zip
 
       - uses: actions/setup-java@v4
         with:

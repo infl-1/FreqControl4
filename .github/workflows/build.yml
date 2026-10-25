@@ -41,7 +41,15 @@ jobs:
 
       - name: Build debug APK
         working-directory: ${{ env.PROJ_DIR }}
-        run: gradle --no-daemon assembleDebug
+        run: |
+          set -o pipefail
+          gradle --no-daemon --console=plain assembleDebug 2>&1 | tee build.log
+
+      - name: Show compile errors
+        if: failure()
+        working-directory: ${{ env.PROJ_DIR }}
+        run: |
+          grep -E "^e: " build.log | sed 's#file://.*/app/src#app/src#' | head -10 | while read -r l; do echo "::error::$l"; done
 
       - uses: actions/upload-artifact@v4
         with:

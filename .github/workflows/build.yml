@@ -10,11 +10,19 @@ jobs:
 
       - name: Unzip project
         run: |
+          echo "Files in repo root:"; ls -la
           ZIP=$(ls *.zip | head -1)
           echo "Using $ZIP"
           mkdir -p src
           unzip -o -q "$ZIP" -d src
-          PROJ=$(dirname "$(find src -name settings.gradle.kts | head -1)")
+          echo "Extracted tree:"; find src -maxdepth 3 | head -50
+          SET=$(find src -name 'settings.gradle*' | head -1)
+          if [ -z "$SET" ]; then
+            echo "ERROR: no settings.gradle(.kts) found inside $ZIP"
+            exit 1
+          fi
+          PROJ=$(dirname "$SET")
+          echo "PROJ=$PROJ"
           echo "PROJ=$PROJ" >> $GITHUB_ENV
 
       - uses: actions/setup-java@v4

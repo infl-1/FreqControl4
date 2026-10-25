@@ -26,6 +26,11 @@ jobs:
           PROJ=$(dirname "$SET")
           echo "PROJ=$PROJ" >> $GITHUB_ENV
 
+      - name: Patch setSpeed clash
+        run: |
+          sed -i 's/fun setSpeed(v: Double)/fun updateSpeed(v: Double)/' $(find src -name Engine.kt)
+          sed -i 's/Engine\.setSpeed(/Engine.updateSpeed(/' $(find src -name FloatingService.kt)
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -45,7 +50,7 @@ jobs:
         if: failure()
         working-directory: ${{ env.PROJ }}
         run: |
-          grep -E "^e: |error:|Unresolved|AAPT" build.log | head -30 || true
+          grep -B25 "FAILURE: Build failed" build.log | head -60 || true
 
       - uses: actions/upload-artifact@v4
         with:

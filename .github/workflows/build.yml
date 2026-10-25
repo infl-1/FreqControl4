@@ -26,11 +26,6 @@ jobs:
           PROJ=$(dirname "$SET")
           echo "PROJ=$PROJ" >> $GITHUB_ENV
 
-      - name: Patch setSpeed clash
-        run: |
-          sed -i 's/fun setSpeed(v: Double)/fun updateSpeed(v: Double)/' $(find src -name Engine.kt)
-          sed -i 's/Engine\.setSpeed(/Engine.updateSpeed(/' $(find src -name FloatingService.kt)
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

@@ -1,30 +1,34 @@
 name: Build APK
+
 on:
-  push:
   workflow_dispatch:
+  push:
+    branches: [main, master]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare project
-        run: |
-          if [ ! -f settings.gradle ]; then
-            unzip -q -o CamUnlock.zip
-            echo "DIR=CamUnlock" >> $GITHUB_ENV
-          else
-            echo "DIR=." >> $GITHUB_ENV
-          fi
+
+      - name: Unzip project
+        run: unzip -q -o FreqControl-v12-fixed.zip
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: 17
+
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.7'
-      - run: gradle assembleDebug --no-daemon
-        working-directory: ${{ env.DIR }}
+          gradle-version: '8.9'
+          build-root-directory: FreqControl
+
+      - name: Build debug APK
+        working-directory: FreqControl
+        run: gradle --no-daemon assembleDebug
+
       - uses: actions/upload-artifact@v4
         with:
-          name: CamUnlock-apk
-          path: ${{ env.DIR }}/app/build/outputs/apk/debug/*.apk
+          name: FreqControl-debug-apk
+          path: FreqControl/app/build/outputs/apk/debug/*.apk

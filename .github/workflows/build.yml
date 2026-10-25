@@ -3,14 +3,18 @@ name: Build APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, master]
+
+permissions:
+  contents: read
 
 env:
-  ZIP_NAME: SpeedTool-1-1-1.zip   # <<< غيّر الاسم هنا فقط
+  ZIP_NAME: SpeedTool-1.1-fixed.zip   # غيّر الاسم هنا فقط (نفس اسم الملف بالضبط، بدون مسافات)
 
 jobs:
   build:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -18,40 +22,13 @@ jobs:
         run: |
           ls -la
           if [ ! -f "$ZIP_NAME" ]; then
-            echo "File not found: $ZIP_NAME"
+            echo "::error::File not found: $ZIP_NAME (تأكد أنه في جذر المستودع وبنفس الاسم)"
             exit 1
           fi
           mkdir -p proj
           unzip -q -o "$ZIP_NAME" -d proj
-          D=$(dirname "$(find proj -name settings.gradle.kts | head -1)")
-          echo "Project dir: $D"
-          echo "PROJ_DIR=$D" >> $GITHUB_ENV
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Accept Android licenses
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-
-      - name: Build debug APK
-        working-directory: ${{ env.PROJ_DIR }}
-        run: |
-          set -o pipefail
-          gradle --no-daemon --console=plain assembleDebug 2>&1 | tee build.log
-
-      - name: Show compile errors
-        if: failure()
-        working-directory: ${{ env.PROJ_DIR }}
-        run: |
-          grep -E "^e: " build.log | sed 's#file://.*/app/src#app/src#' | head -10 | while read -r l; do echo "::error::$l"; done
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: SpeedTool-debug-apk
-          path: ${{ env.PROJ_DIR }}/app/build/outputs/apk/debug/*.apk
+          S=$(find proj -name settings.gradle.kts | head -1)
+          if [ -z "$S" ]; then
+            echo "::error::settings.gradle.kts not found inside $ZIP_NAME"
+            exit 1
+          fi

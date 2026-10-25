@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 env:
-  ZIP_NAME: SpeedTool-1-1.zip   # <<< غيّر الاسم هنا فقط
+  ZIP_NAME: SpeedTool-1-1-1.zip   # <<< غيّر الاسم هنا فقط
 
 jobs:
   build:

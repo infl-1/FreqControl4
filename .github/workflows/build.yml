@@ -10,7 +10,7 @@ jobs:
 
       - name: Unzip project
         run: |
-          ZIP="SpeedTool-2_0.zip"
+          ZIP="SpeedTool-2_1.zip"
           ls -la
           if [ ! -f "$ZIP" ]; then
             echo "ERROR: $ZIP not found in repo root"

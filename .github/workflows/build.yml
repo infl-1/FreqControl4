@@ -10,7 +10,7 @@ jobs:
 
       - name: Unzip project
         run: |
-          ZIP="TikSaver1.zip"
+          ZIP="TikSaver.zip"
           ls -la
           if [ ! -f "$ZIP" ]; then
             echo "ERROR: $ZIP not found in repo root"

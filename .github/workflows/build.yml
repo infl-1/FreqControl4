@@ -8,7 +8,7 @@ on:
         required: false
 
 env:
-  ZIP_NAME: tiksaver-quality.zip
+  ZIP_NAME: ieie.zip
 
 jobs:
   build:

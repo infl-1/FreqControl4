@@ -2,6 +2,14 @@ name: Build APK
 on:
   push:
   workflow_dispatch:
+    inputs:
+      zip_name:
+        description: "اسم ملف الـ zip (اتركه فاضي لاستخدام الاسم اللي في الملف)"
+        required: false
+
+env:
+  ZIP_NAME: tiksaver-quality.zip
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,22 +17,35 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Unzip project
+        shell: bash
+        env:
+          INPUT_ZIP: ${{ inputs.zip_name }}
         run: |
-          ZIP="jsjs.zip"
-          ls -la
+          ZIP="${INPUT_ZIP:-$ZIP_NAME}"
+          echo "Using: $ZIP"
           if [ ! -f "$ZIP" ]; then
-            echo "ERROR: $ZIP not found in repo root"
-            exit 1
+            echo "ERROR: $ZIP not found in repo root"; exit 1
           fi
           mkdir -p src
           unzip -o -q "$ZIP" -d src
-          SET=$(find src -name 'settings.gradle*' | head -1)
+          SET=$(find src -path '*/__MACOSX' -prune -o -name 'settings.gradle*' -print | head -1)
           if [ -z "$SET" ]; then
-            echo "ERROR: no settings.gradle found inside $ZIP"
-            exit 1
+            echo "ERROR: no settings.gradle found inside $ZIP"; exit 1
           fi
-          PROJ=$(dirname "$SET")
-          echo "PROJ=$PROJ" >> $GITHUB_ENV
+          echo "PROJ=$(dirname "$SET")" >> $GITHUB_ENV
+
+      - name: Copy QualityPicker.kt (if in repo root)
+        shell: bash
+        run: |
+          if [ -f QualityPicker.kt ]; then
+            MAIN=$(find "$PROJ" -name 'MainActivity.kt' | head -1)
+            if [ -n "$MAIN" ]; then
+              cp QualityPicker.kt "$(dirname "$MAIN")/"
+              echo "Copied to $(dirname "$MAIN")"
+            else
+              echo "WARNING: MainActivity.kt not found"
+            fi
+          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -36,19 +57,11 @@ jobs:
           gradle-version: 8.7
 
       - name: Build debug APK
+        shell: bash
         working-directory: ${{ env.PROJ }}
         run: |
-          gradle assembleDebug --no-daemon -Pkotlin.compiler.execution.strategy=in-process 2>&1 | tee build.log
-          exit ${PIPESTATUS[0]}
-
-      - name: Show errors
-        if: failure()
-        working-directory: ${{ env.PROJ }}
-        run: |
-          grep -B25 "FAILURE: Build failed" build.log | head -60 || true
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: SpeedTool-debug
-          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+          else
+            gradle a

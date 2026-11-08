@@ -1,3 +1,4 @@
+
 name: Build APK
 on:
   push:
@@ -24,45 +25,10 @@ jobs:
           ZIP="${INPUT_ZIP:-$ZIP_NAME}"
           echo "Using: $ZIP"
           if [ ! -f "$ZIP" ]; then
-            echo "ERROR: $ZIP not found in repo root"; exit 1
+            echo "ERROR: $ZIP not found in repo root"; ls -la; exit 1
           fi
+          echo "=== Contents of $ZIP ==="
+          unzip -l "$ZIP" | head -40
           mkdir -p src
           unzip -o -q "$ZIP" -d src
-          SET=$(find src -path '*/__MACOSX' -prune -o -name 'settings.gradle*' -print | head -1)
-          if [ -z "$SET" ]; then
-            echo "ERROR: no settings.gradle found inside $ZIP"; exit 1
-          fi
-          echo "PROJ=$(dirname "$SET")" >> $GITHUB_ENV
-
-      - name: Copy QualityPicker.kt (if in repo root)
-        shell: bash
-        run: |
-          if [ -f QualityPicker.kt ]; then
-            MAIN=$(find "$PROJ" -name 'MainActivity.kt' | head -1)
-            if [ -n "$MAIN" ]; then
-              cp QualityPicker.kt "$(dirname "$MAIN")/"
-              echo "Copied to $(dirname "$MAIN")"
-            else
-              echo "WARNING: MainActivity.kt not found"
-            fi
-          fi
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.7
-
-      - name: Build debug APK
-        shell: bash
-        working-directory: ${{ env.PROJ }}
-        run: |
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
-          else
-            gradle a
-                      unzip -l "$ZIP" | head -40
+          for i in 1 2

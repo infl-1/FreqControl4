@@ -9,7 +9,7 @@ on:
         required: false
 
 env:
-  ZIP_NAME: ieie.zip
+  ZIP_NAME: TikSaver-v1.4.zip
 
 jobs:
   build:

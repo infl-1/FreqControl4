@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  ZIP_NAME: SmartCapture_fps_4k_mod_v3.zip
+  ZIP_NAME: SmartCapture_fps_4k_mod_v4.zip
   APKTOOL_VERSION: 2.9.3
 
 jobs:

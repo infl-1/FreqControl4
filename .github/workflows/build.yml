@@ -1,31 +1,74 @@
-name: Build LSPosed module
+name: Build SmartCapture mod
 on:
   push:
   workflow_dispatch:
 
+env:
+  MOD_ZIP: SmartCapture_fps_4k_mod.zip
+  CAP_ZIP: SmartCapture_fpscap_patch.zip
+  APKTOOL_VERSION: 2.9.3
+
 jobs:
-  module:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Unzip module project
-        run: unzip -q -o SmartCaptureLS.zip
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.7
+      - name: Prepare inputs (join APK parts + unzip mods)
+        shell: bash
+        run: |
+          ls SC_part_* >/dev/null 2>&1 || { echo "ERROR: SC_part_* not found"; ls -la; exit 1; }
+          [ -f "$MOD_ZIP" ] || { echo "ERROR: $MOD_ZIP not found"; ls -la; exit 1; }
+          [ -f "$CAP_ZIP" ] || { echo "ERROR: $CAP_ZIP not found"; ls -la; exit 1; }
+          cat SC_part_* > SmartCapture.apk
+          ls -la SmartCapture.apk
+          unzip -o -q "$MOD_ZIP" -d .
+          unzip -o -q "$CAP_ZIP" -d .
+          test -f mod/apply_mod.py
+          test -f fixcap/apply_fpscap.py
 
-      - name: Build LSPosed module
-        working-directory: SmartCaptureLS
-        run: gradle assembleRelease --no-daemon
+      - name: Get apktool
+        shell: bash
+        run: |
+          curl -fsSL -o apktool.jar \
+            "https://github.com/iBotPeaches/Apktool/releases/download/v${APKTOOL_VERSION}/apktool_${APKTOOL_VERSION}.jar"
+
+      - name: Decode APK
+        shell: bash
+        run: java -jar apktool.jar d -f SmartCapture.apk -o SmartCapture
+
+      - name: Apply mod (fps + quality)
+        shell: bash
+        run: python3 mod/apply_mod.py SmartCapture
+
+      - name: Apply fps cap patch
+        shell: bash
+        run: python3 fixcap/apply_fpscap.py SmartCapture
+
+      - name: Build APK
+        shell: bash
+        run: |
+          mkdir -p out
+          java -jar apktool.jar b SmartCapture -o out/unsigned.apk
+
+      - name: Align and sign
+        shell: bash
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/zipalign" -f -p 4 out/unsigned.apk out/aligned.apk
+          keytool -genkeypair -keystore debug.jks -storepass android -keypass android \
+            -alias key -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SmartCaptureMod"
+          "$BT/apksigner" sign --ks debug.jks --ks-pass pass:android --key-pass pass:android \
+            --out out/SmartCapture_mod.apk out/aligned.apk
+          "$BT/apksigner" verify out/SmartCapture_mod.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: SmartCaptureLS-module
-          path: SmartCaptureLS/app/build/outputs/apk/release/*.apk
+          name: SmartCapture-mod
+          path: out/SmartCapture_mod.apk
+          if-no-files-found: error

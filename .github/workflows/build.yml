@@ -1,14 +1,10 @@
-name: Build SmartCapture mod
+name: Build LSPosed module
 on:
   push:
   workflow_dispatch:
 
-env:
-  ZIP_NAME: SmartCapture_fps_4k_mod_v8.zip
-  APKTOOL_VERSION: 2.9.3
-
 jobs:
-  build:
+  module:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,49 +14,15 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Prepare inputs (join APK parts + unzip mod)
-        shell: bash
-        run: |
-          ls SC_part_* >/dev/null 2>&1 || { echo "ERROR: SC_part_* not found"; ls -la; exit 1; }
-          [ -f "$ZIP_NAME" ] || { echo "ERROR: $ZIP_NAME not found"; ls -la; exit 1; }
-          cat SC_part_* > SmartCapture.apk
-          ls -la SmartCapture.apk
-          unzip -o -q "$ZIP_NAME" -d .
-          test -f mod/apply_mod.py
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
 
-      - name: Get apktool
-        shell: bash
-        run: |
-          curl -fsSL -o apktool.jar \
-            "https://github.com/iBotPeaches/Apktool/releases/download/v${APKTOOL_VERSION}/apktool_${APKTOOL_VERSION}.jar"
-
-      - name: Decode APK
-        shell: bash
-        run: java -jar apktool.jar d -f SmartCapture.apk -o SmartCapture
-
-      - name: Apply mod (fps + quality)
-        shell: bash
-        run: python3 mod/apply_mod.py SmartCapture
-
-      - name: Build APK
-        shell: bash
-        run: |
-          mkdir -p out
-          java -jar apktool.jar b SmartCapture -o out/unsigned.apk
-
-      - name: Align and sign
-        shell: bash
-        run: |
-          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          "$BT/zipalign" -f -p 4 out/unsigned.apk out/aligned.apk
-          keytool -genkeypair -keystore debug.jks -storepass android -keypass android \
-            -alias key -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SmartCaptureMod"
-          "$BT/apksigner" sign --ks debug.jks --ks-pass pass:android --key-pass pass:android \
-            --out out/SmartCapture_mod.apk out/aligned.apk
-          "$BT/apksigner" verify out/SmartCapture_mod.apk
+      - name: Build LSPosed module
+        working-directory: SmartCaptureLS
+        run: gradle assembleRelease --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
-          name: SmartCapture-mod
-          path: out/SmartCapture_mod.apk
-          if-no-files-found: error
+          name: SmartCaptureLS-module
+          path: SmartCaptureLS/app/build/outputs/apk/release/*.apk

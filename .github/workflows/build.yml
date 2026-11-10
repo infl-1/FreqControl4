@@ -9,6 +9,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Unzip module project
+        run: unzip -q -o SmartCaptureLS.zip
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

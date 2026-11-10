@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  MOD_ZIP: SmartCapture_fps_4k_mod.zip
+  MOD_ZIP: doug.zip
   CAP_ZIP: SmartCapture_fpscap_patch.zip
   APKTOOL_VERSION: 2.9.3
 

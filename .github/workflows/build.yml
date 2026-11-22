@@ -1,9 +1,10 @@
-name: Build APK
+name: Build patched CapCut
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, master]
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -11,37 +12,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip project
+      - name: Unzip patch
+        run: unzip -o capcut_telegram_patch.zip -d patch
+
+      - name: Download original APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download original -p Capcut-v20_0_0.apk
+
+      - name: Apply patch
+        run: python3 patch/apply_to_apk.py Capcut-v20_0_0.apk unsigned.apk
+
+      - name: Align and sign
         run: |
-          if [ -f DeviceSpoof.zip ]; then
-            mkdir -p _src
-            unzip -o -q DeviceSpoof.zip -d _src
-          else
-            mkdir -p _src
-            cp -r . _src/ || true
-          fi
-
-      - name: Find project folder
-        id: find
-        run: |
-          S=$(find _src -name settings.gradle -not -path '*/node_modules/*' | head -n1)
-          [ -n "$S" ] || { echo "ما لقيت settings.gradle"; exit 1; }
-          echo "dir=$(dirname "$S")" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-
-      - name: Build debug APK
-        working-directory: ${{ steps.find.outputs.dir }}
-        run: gradle --no-daemon assembleDebug
+          BT="$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sort -V | tail -1)"
+          $BT/zipalign -p -f 4 unsigned.apk aligned.apk
+          keytool -genkeypair -keystore my.jks -alias key -keyalg RSA -keysize 2048 \
+            -validity 10000 -storepass 123456 -keypass 123456 -dname "CN=Me"
+          $BT/apksigner sign --ks my.jks --ks-pass pass:123456 \
+            --out CapCut-patched.apk aligned.apk
+          $BT/apksigner verify CapCut-patched.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: DeviceSpoof-apk
-          path: ${{ steps.find.outputs.dir }}/app/build/outputs/apk/debug/*.apk
+          name: CapCut-patched
+          path: CapCut-patched.apk

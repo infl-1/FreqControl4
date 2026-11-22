@@ -1,7 +1,9 @@
 name: Build APK
+
 on:
-  push:
   workflow_dispatch:
+  push:
+    branches: [main, master]
 
 jobs:
   build:
@@ -10,7 +12,21 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Unzip project
-        run: unzip -o "TikSaver-v1.5.zip"
+        run: |
+          if [ -f DeviceSpoof.zip ]; then
+            mkdir -p _src
+            unzip -o -q DeviceSpoof.zip -d _src
+          else
+            mkdir -p _src
+            cp -r . _src/ || true
+          fi
+
+      - name: Find project folder
+        id: find
+        run: |
+          S=$(find _src -name settings.gradle -not -path '*/node_modules/*' | head -n1)
+          [ -n "$S" ] || { echo "ما لقيت settings.gradle"; exit 1; }
+          echo "dir=$(dirname "$S")" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v4
         with:
@@ -19,14 +35,13 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 8.7
-          build-root-directory: TikSaver
+          gradle-version: '8.9'
 
       - name: Build debug APK
-        working-directory: TikSaver
-        run: gradle assembleDebug --no-daemon
+        working-directory: ${{ steps.find.outputs.dir }}
+        run: gradle --no-daemon assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
-          name: TikSaver-debug
-          path: TikSaver/app/build/outputs/apk/debug/*.apk
+          name: DeviceSpoof-apk
+          path: ${{ steps.find.outputs.dir }}/app/build/outputs/apk/debug/*.apk
